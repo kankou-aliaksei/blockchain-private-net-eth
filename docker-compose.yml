@@ -1,0 +1,84 @@
+version: '3.7'
+
+services:
+  eth-boot-node:
+    hostname: eth-boot-node
+    env_file:
+      - .env
+    entrypoint: src/start.sh
+    build:
+      context: eth-client
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD}
+    command:
+      --nodekeyhex=${BOOT_NODE_KEY_HEX}
+      --nodiscover
+      --ipcdisable
+      --networkid=${NETWORK_ID}
+      --netrestrict=${PRIVATE_SUBNET}
+    networks:
+      private-eth-net:
+
+  eth-rpc-endpoint:
+    hostname: eth-rpc-endpoint
+    env_file:
+      - .env
+    entrypoint: src/start.sh
+    build:
+      context: eth-client
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD}
+    depends_on:
+      - eth-boot-node
+    command:
+      --bootnodes="enode://${BOOT_NODE_ADDRESS}@eth-boot-node:30303"
+      --allow-insecure-unlock
+      --http
+      --http.addr=${HTTP_ADDR}
+      --http.api="eth,web3,net,admin,personal"
+      --http.corsdomain=${HTTP_CORSDOMAIN}
+      --networkid=${NETWORK_ID}
+      --netrestrict=${PRIVATE_SUBNET}
+      --http.vhosts=${HTTP_VHOSTS}
+    ports:
+      - "8545:8545"
+    networks:
+      private-eth-net:
+
+  eth-miner:
+    hostname: eth-miner
+    env_file:
+      - .env
+    entrypoint: src/start.sh
+    build:
+      context: eth-client
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD}
+    depends_on:
+      - eth-boot-node
+    command:
+      --bootnodes="enode://${BOOT_NODE_ADDRESS}@eth-boot-node:30303"
+      --mine
+      --miner.threads=1
+      --networkid=${NETWORK_ID}
+      --netrestrict=${PRIVATE_SUBNET}
+    networks:
+      private-eth-net:
+
+  eth-netstats:
+    build: eth-netstats
+    restart: on-failure
+    container_name: netstats
+    environment:
+      - WS_SECRET=${WS_SECRET}
+    ports:
+      - "3000:3000"
+    networks:
+      private-eth-net:
+
+networks:
+  private-eth-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${PRIVATE_SUBNET}
