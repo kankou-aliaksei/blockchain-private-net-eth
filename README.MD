@@ -8,17 +8,18 @@ Making a local Ethereum blockchain network using Geth (go-ethereum), Docker cont
 
 * Docker
 * Docker Compose
+* make
 
 ## Build
 
 ```
-docker-compose build
+make build
 ```
 
 ## Run
 
 ```
-docker-compose up
+make deploy
 ```
 
 ## Geth options
